@@ -20,12 +20,12 @@ class MXG_model(mlx_nn.Module):
 
         self.dropout = mlx_nn.Dropout(p=dropout)
 
-    def __call__(self, edge_index, node_features, batch_indices):
+    def __call__(self, edge_index, node_features, batch_indices, batch_size):
         h = mlx_nn.relu(self.conv1(edge_index, node_features))
         h = mlx_nn.relu(self.conv2(edge_index, h))
         h = self.conv3(edge_index, h)
 
-        h = mxg_nn.global_mean_pool(h, batch_indices)
+        h = mxg_nn.global_mean_pool(h, batch_indices, batch_size)
 
         h = self.dropout(h)
         h = self.linear(h)
@@ -38,14 +38,27 @@ def loss_fn(y_hat, y, parameters=None):
 
 
 def forward_fn(model, graph):
-    y_hat = model(graph.edge_index, graph.node_features, graph.batch_indices)
-    labels = graph.graph_labels
+    y_hat = model(
+        graph["edge_index"],
+        graph["node_features"],
+        graph["_batch_indices"],
+        graph["batch_size"],
+    )
+    labels = graph["graph_labels"]
     loss = loss_fn(y_hat, labels, model.parameters())
     return loss, y_hat
 
 
 def setup_training_mxg(dataset, layer, batch_size, hid_size, compile=True):
+    # Original batch loader
     loader = mxg_loaders.Dataloader(dataset, batch_size=batch_size, shuffle=True)
+
+    # Batch loader with padding
+    # mean_num_edges = sum([g.num_edges for g in dataset]) / len(dataset)
+    # batch_num_edges = int(batch_size * mean_num_edges)
+    # loader = mxg_loaders.PaddedDataloader(
+    #     dataset, batch_num_edges=batch_num_edges, shuffle=True
+    # )
 
     model = MXG_model(
         layer=layer,
@@ -78,5 +91,5 @@ def setup_training_mxg(dataset, layer, batch_size, hid_size, compile=True):
 def train_mxg(loader, step, state=None, epochs=2):
     for _ in range(epochs):
         for graph in loader:
-            step(graph)
+            step(graph.to_dict())
             mx.eval(state)

@@ -40,8 +40,8 @@ COMPILE = {  # whether to compile training step
 }
 
 FRAMEWORKS = [
-    "dgl",
-    "pyg",
+    # "dgl",
+    # "pyg",
     "mxg",
 ]
 DATASETS = [
@@ -68,6 +68,30 @@ framework_to_train = {
     "pyg": train_pyg,
     "dgl": train_dgl,
 }
+
+# Benchmark of traditional loader and padded loader
+
+# import mlx_graphs.loaders as mxg_loaders
+
+# def fn(loader):
+#     for p in loader:
+#         pass
+
+
+# dataset = mxg_datasets.TUDataset("BZR_MD")
+# mean_num_edges = sum([g.num_edges for g in dataset]) / len(dataset)
+# loaders = [
+#     mxg_loaders.Dataloader(dataset, BATCH_SIZE),
+#     mxg_loaders.PaddedDataloader(dataset, int(BATCH_SIZE * mean_num_edges))
+# ]
+
+# for loader in loaders:
+#     times = timeit.Timer(
+#         lambda: fn(loader)
+#     ).repeat(repeat=TIMEIT_REPEAT, number=TIMEIT_NUMBER)
+
+#     time = min(times) / TIMEIT_NUMBER
+#     print(time)
 
 
 def dgl_dataset(name):
@@ -109,10 +133,10 @@ def benchmark(framework, loader, step, state):
 # Run benchmarks
 results = [["Dataset", "Framework", "Layer", "Time/epoch"]]
 for dataset_name in tqdm(DATASETS):
+    print(f"Benchmarking {dataset_name}...")
     for framework in FRAMEWORKS:
+        dataset = framework_to_datasets[framework](dataset_name)
         for compile in COMPILE[framework]:
-            dataset = framework_to_datasets[framework](dataset_name)
-
             for i, layer_name in enumerate(LAYERS):
                 layer = layer_classes[framework][layer_name]
                 loader, step, state = framework_to_setup[framework](

@@ -55,7 +55,9 @@ def global_max_pool(
 
 
 def global_mean_pool(
-    node_features: mx.array, batch_indices: Optional[mx.array] = None
+    node_features: mx.array,
+    batch_indices: Optional[mx.array] = None,
+    batch_size=None,
 ) -> mx.array:
     """Takes the feature-wise mean value along all node features to obtain
     a global graph-level representation.
@@ -75,5 +77,6 @@ def global_mean_pool(
     if batch_indices is None:
         return node_features.mean(axis=0, keepdims=True)
 
-    out_size = batch_indices.max().item() + 1
+    # out_size = batch_indices.max().item() + 1
+    out_size = batch_size
     return scatter(node_features, batch_indices, out_size=out_size, axis=0, aggr="mean")
